@@ -1,6 +1,6 @@
 //
 //     @version 0.0.3 http://rsurjano.github.com/ikaru/
-//     Ikaru.js is a lightweiht & Faster DOM manipulation cross Browser
+//     ikaru.js is a lightweiht & Faster DOM manipulation cross Browser
 //
 //     @Supports
 //
@@ -17,26 +17,54 @@
    */
   var Dom = {};
 
-  var _domReadyHandlers = [];
-  var _domLoadedHandlers = [];
-  var _isDomReady = false;
-  var _isDomLoaded = false;
-  var _animationLastTime;
+  var _domReadyHandlers = [],
+    _domLoadedHandlers = [],
+    _isDomReady = false,
+    _isDomLoaded = false,
+    _animationLastTime;
 
+  // EVENTS
   var addListener = document.addEventListener ? 'addEventListener' : 'attachEvent';
   var removeListener = document.removeEventListener ? 'removeEventListener' : 'detachEvent';
   var eventPrefix = document.addEventListener ? '' : 'on';
   var createEvent = document.createEvent ? 'createEvent' : 'createEventObject';
   var dispatchEvent = document.dispatchEvent ? 'dispatchEvent' : 'fireEvent';
-  var vendors = ['-moz-', '-ms-', '-webkit-', '-o-', ''];
 
+
+  // MANIPULATION / AANIMATIONS
   var cssNameProperty = function(prop) {
     return prop;
   };
   var requestAnimationFrame = window.requestAnimationFrame;
   var cancelAnimationFrame = window.cancelAnimationFrame || window.cancelRequestAnimationFrame;
-  var div = document.createElement('div');
   var style = _getComputedStyle(div);
+
+  // CROSSBROWSER
+  var vendors = ['-moz-', '-ms-', '-webkit-', '-o-', ''];
+
+  //DOM
+  var doc = window.document;
+  var createElem = doc.createElement;
+  var div = createElem('div');
+
+  // All **ECMAScript 5** native function implementations to shortcut use
+  var
+    nativeForEach = ArrayProto.forEach,
+    nativeMap = ArrayProto.map,
+    nativeReduce = ArrayProto.reduce,
+    nativeReduceRight = ArrayProto.reduceRight,
+    nativeFilter = ArrayProto.filter,
+    nativeEvery = ArrayProto.every,
+    nativeSome = ArrayProto.some,
+    nativeIndexOf = ArrayProto.indexOf,
+    nativeLastIndexOf = ArrayProto.lastIndexOf,
+    nativeIsArray = Array.isArray,
+    nativeKeys = Object.keys,
+    nativeBind = FuncProto.bind;
+
+  // MATH FUNCTIONS
+  var math = Math,
+    round = math.round;
 
   //ie?
   var ie = (function() {
@@ -57,9 +85,7 @@
   //transition detection
   var transitionSupport = (function() {
     for (var i in vendors) {
-      if (_isString(style[vendors[i] + 'transition'])) {
-        return true;
-      }
+      if (_isString(style[vendors[i] + 'transition'])) return true;
     }
     return false;
   })();
@@ -91,58 +117,160 @@
   }
 
 
-  // Util functions
-  var error = function(str) {
-    if (typeof str !== 'string') throw new Error('provide a string to Throw Error');
-    throw new Error(str);
+  var _curry2 = function _curry2(fn) {
+    return function(a, b) {
+      switch (arguments.length) {
+        case 0:
+          throw _noArgsException();
+        case 1:
+          return function(b) {
+            return fn(a, b);
+          };
+        default:
+          return fn(a, b);
+      }
+    };
   };
 
 
-  // Checks if given parameter is a DOMNode
-  ikaru.isDom = function(ob) {
-    return !!(ob && ob.nodeType === 1);
+  // Util functions
+  //
+
+  var _indexOf = function _indexOf(array, obj) {
+    if (Array.prototype.indexOf) return Array.prototype.indexOf.call(array, obj);
+    for (var i = 0, j = array.length; i < j; i++) {
+      if (array[i] === obj) return i;
+    }
+    return -1;
+  };
+  var _isArray = nativeIsArray || function _isArray(val) {
+    return val != null && val.length >= 0 && Object.prototype.toString.call(val) === '[object Array]';
+  };
+  var _isString = function _isString(object) {
+    return typeof object === 'string';
+  };
+  var _isNumeric = function _isNumeric(object) {
+    return typeof object === 'number' && isFinite(object);
+  };
+  var _isObject = function _isObject(object) {
+    return typeof object === 'object';
+  };
+  var _isFunction = function _isFunction(object) {
+    return typeof object === 'function';
+  };
+  var _isLiteralObject = function _isLiteralObject(object) {
+    return object && typeof object === "object" && Object.getPrototypeOf(object) === Object.getPrototypeOf({});
+  };
+  var _isIterable = function _isIterable(object) {
+    if (I.isNode(object) || I.isElement(object) || object === window) return false;
+    var r = _isLiteralObject(object) || _isArray(object) || (typeof object === 'object' && object !== null && object['length'] !== undefined);
+    return r;
+  };
+  var _getComputedStyle = function _getComputedStyle(element, prop) {
+    var computedStyle;
+    if (typeof window.getComputedStyle === 'function') { //normal browsers
+      computedStyle = window.getComputedStyle(element);
+    } else if (typeof document.currentStyle !== undefined) { //shitty browsers
+      computedStyle = element.currentStyle;
+    } else {
+      computedStyle = element.style;
+    }
+    if (prop) {
+      return computedStyle[prop];
+    } else {
+      return computedStyle;
+    }
+  };
+  var _each = function _each(object, callback) {
+    if (_isArray(object) || (typeof object === 'object' && object.length !== undefined)) {
+      for (var i = 0, l = object.length; i < l; i++) {
+        callback.apply(object[i], [object[i], i]);
+      }
+      return;
+    }
+
+    if (_isLiteralObject(object)) {
+      for (var key in object) {
+        callback.apply(object[key], [object[key], key]);
+      }
+    }
+  };
+  var _error = function _error(msg) {
+    str = msg || 'Error detected';
+    throw new Error(str);
+  };
+  var _checkDomRequired = function _checkDomRequired(object) {
+    if (!!(object && object.nodeType === 1)) _error('HTML Object required');
+    return true;
+  };
+  var _noArgsException = function _noArgsException() {
+    return new TypeError('Funtion called with no arguments');
+  };
+  var _forEach = function _forEach(fn, list) {
+    var idx = -1,
+      len = list.length;
+    while (++idx < len) {
+      fn(list[idx]);
+    }
+    // i can't bear not to return *something*
+    return list;
+  };
+
+  var _has = _curry2(function(prop, obj) {
+    return Object.prototype.hasOwnProperty.call(obj, prop);
+  });
+
+  // Implement forEach iteration
+  I.forEach = _curry2(_forEach);
+
+  // See type element
+  // Object | Number | String
+  // @return true | false
+  I.is = _curry2(function is(Ctor, val) {
+    return val != null && val.constructor === Ctor || val instanceof Ctor;
+  });
+
+  //Verify if is empty
+  I.isEmpty = function(object) {
+    if (object == null) return true;
+    if (_isArray(object) || I.is('string', object)) return object.length === 0;
+    for (var key in object)
+      if (_has(key, object)) return false;
+    return true;
+  };
+
+  // Checks if given parameter is a DOMNode Object
+  I.isDom = function(object) {
+    return !!(object && object.nodeType === 1);
   };
 
   // DOM Manipulation
   // based in part from: http://blog.garstasio.com/you-dont-need-jquery/
 
-  // domNode | Create new DOM element
+  // Create new Tag DOM Object
   // IE 5.5+
-  ikaru.domNode = function(tag) {
-    if (ikaru.isEmpty(tag) || !ikaru.is('string', tag)) return '';
+  I.domNode = function(tag) {
+    if (I.isEmpty(tag) || !I.is('String', tag)) error('Need a DOM Object');
     return createElem(tag);
   };
 
-  /**
-   * Polyfill for window.requestAnimationFrame
-   * @see https://developer.mozilla.org/en-US/docs/Web/API/window.requestAnimationFrame
-   * @returns {Function}
-   */
-  Dom.requestAnimationFrame = function() {
+  // Polyfill window.requestAnimationFrame
+  I.requestAnimationFrame = function() {
     return requestAnimationFrame;
   };
 
-  /**
-   * Polyfill for window.cancelAnimationFrame
-   * @see https://developer.mozilla.org/en-US/docs/Web/API/window.cancelAnimationFrame
-   * @returns {Function}
-   */
-  Dom.cancelAnimationFrame = function() {
+  // Polyfill window.cancelAnimationFrame
+  I.cancelAnimationFrame = function() {
     return cancelAnimationFrame;
   };
 
-  /**
-   * Normalized Event object
-   *
-   * @param {DOMEvent} e
-   * @constructor
-   */
-  Dom.Event = function(e) {
+  // Normalized Event object
+  I.Event = function(e) {
     this._e = e;
     /**
      * Stops event bubbling
      */
-    Dom.Event.prototype.stopPropagation = function() {
+    I.Event.prototype.stopPropagation = function() {
       if (this._e.stopPropagation) {
         this._e.stopPropagation();
       } else {
@@ -153,7 +281,7 @@
     /**
      * Prevents default behaviour
      */
-    Dom.Event.prototype.preventDefault = function() {
+    I.Event.prototype.preventDefault = function() {
       if (this._e.preventDefault) {
         this._e.preventDefault();
       } else {
@@ -174,111 +302,89 @@
     this.path = this._e.path;
     this.timeStamp = this._e.timeStamp;
     if (ie & ie < 9) {
-      this.button = this._e.button == 1 ? Dom.Mouse.BUTTON_LEFT : (this._e.button == 4 ? Dom.Mouse.BUTTON_MIDDLE : Dom.Mouse.BUTTON_RIGHT);
+      this.button = this._e.button == 1 ? I.Mouse.BUTTON_LEFT : (this._e.button == 4 ? I.Mouse.BUTTON_MIDDLE : I.Mouse.BUTTON_RIGHT);
     } else if (this._e.hasOwnProperty('which')) {
-      this.button = this._e.which == 1 ? Dom.Mouse.BUTTON_LEFT : (this._e.which == 2 ? Dom.Mouse.BUTTON_MIDDLE : Dom.Mouse.BUTTON_RIGHT);
+      this.button = this._e.which == 1 ? I.Mouse.BUTTON_LEFT : (this._e.which == 2 ? I.Mouse.BUTTON_MIDDLE : I.Mouse.BUTTON_RIGHT);
     } else {
       this.button = this._e.button;
     }
   };
 
-  Dom.Mouse = {};
+  // I.Mouse = {};
 
-  Dom.Mouse.BUTTON_LEFT = 0;
-  Dom.Mouse.BUTTON_MIDDLE = 1;
-  Dom.Mouse.BUTTON_RIGHT = 2;
+  // I.Mouse.BUTTON_LEFT = 0;
+  // I.Mouse.BUTTON_MIDDLE = 1;
+  // I.Mouse.BUTTON_RIGHT = 2;
 
-  /**
-   * Mouse events
-   */
-  Dom.Event.ON_CLICK = 'click';
-  Dom.Event.ON_DBLCLICK = 'dblclick';
-  Dom.Event.ON_CONTEXTMENU = 'contextmenu';
-  Dom.Event.ON_MOUSEDOWN = 'mousedown';
-  Dom.Event.ON_MOUSEENTER = 'mouseenter';
-  Dom.Event.ON_MOUSELEAVE = 'mouseleave';
-  Dom.Event.OM_MOUSEMOVE = 'mousemove';
-  Dom.Event.ON_MOUSEOVER = 'mouseover';
-  Dom.Event.ON_MOUSEOUT = 'mouseout';
-  Dom.Event.ON_MOUSEUP = 'mouseup';
-  Dom.Event.ON_MOUSEMOVE = 'mousemove';
+  // // Mouse events
+  // I.Event.ON_CLICK = 'click';
+  // I.Event.ON_DBLCLICK = 'dblclick';
+  // I.Event.ON_CONTEXTMENU = 'contextmenu';
+  // I.Event.ON_MOUSEDOWN = 'mousedown';
+  // I.Event.ON_MOUSEENTER = 'mouseenter';
+  // I.Event.ON_MOUSELEAVE = 'mouseleave';
+  // I.Event.OM_MOUSEMOVE = 'mousemove';
+  // I.Event.ON_MOUSEOVER = 'mouseover';
+  // I.Event.ON_MOUSEOUT = 'mouseout';
+  // I.Event.ON_MOUSEUP = 'mouseup';
+  // I.Event.ON_MOUSEMOVE = 'mousemove';
 
-  /**
-   * Touch Events
-   */
-  Dom.Event.ON_TOUCHSTART = 'touchstart';
-  Dom.Event.ON_TOUCHEND = 'touchend';
-  Dom.Event.ON_TOUCHMOVE = 'touchmove';
-  Dom.Event.ON_TOUCHCANCEL = 'touchcancel';
+  // // Touch Events
+  // I.Event.ON_TOUCHSTART = 'touchstart';
+  // I.Event.ON_TOUCHEND = 'touchend';
+  // I.Event.ON_TOUCHMOVE = 'touchmove';
+  // I.Event.ON_TOUCHCANCEL = 'touchcancel';
 
-  /**
-   * Keyboard events
-   */
-  Dom.Event.ON_KEYDOWN = 'keydown';
-  Dom.Event.ON_KEYUP = 'keyup';
-  Dom.Event.ON_KEYPRESS = 'keypress';
+  // // Keyboard events
+  // I.Event.ON_KEYDOWN = 'keydown';
+  // I.Event.ON_KEYUP = 'keyup';
+  // I.Event.ON_KEYPRESS = 'keypress';
 
-  //form events
-  Dom.Event.ON_SELECT = 'select';
-  Dom.Event.ON_RESET = 'reset';
-  Dom.Event.ON_FOCUS = 'focus';
-  Dom.Event.ON_BLUR = 'blur';
-  Dom.Event.ON_SUBMIT = 'submit';
-  Dom.Event.ON_CHANGE = 'change';
+  // //form events
+  // I.Event.ON_SELECT = 'select';
+  // I.Event.ON_RESET = 'reset';
+  // I.Event.ON_FOCUS = 'focus';
+  // I.Event.ON_BLUR = 'blur';
+  // I.Event.ON_SUBMIT = 'submit';
+  // I.Event.ON_CHANGE = 'change';
 
-  //frame/window events
-  Dom.Event.ON_LOAD = 'load';
-  Dom.Event.ON_UNLOAD = 'unload';
-  Dom.Event.ON_RESIZE = 'resize';
-  Dom.Event.ON_UNLOAD = 'unload';
-  Dom.Event.ON_ERROR = 'error';
-  Dom.Event.ON_SCROLL = 'scroll';
+  // //frame/window events
+  // I.Event.ON_LOAD = 'load';
+  // I.Event.ON_UNLOAD = 'unload';
+  // I.Event.ON_RESIZE = 'resize';
+  // I.Event.ON_UNLOAD = 'unload';
+  // I.Event.ON_ERROR = 'error';
+  // I.Event.ON_SCROLL = 'scroll';
 
-  /**
-   * Standard drag and drop events
-   */
-  Dom.Event.ON_DRAG = 'drag';
-  Dom.Event.ON_DRAGSTART = 'dragstart';
-  Dom.Event.ON_DRAGEND = 'dragend';
-  Dom.Event.ON_DRAGENTER = 'dragenter';
-  Dom.Event.ON_DRAGLEAVE = 'dragleave';
-  Dom.Event.ON_DRAGOVER = 'dragover';
-  Dom.Event.ON_DROP = 'drop';
+  // // Standard drag and drop events
+  // I.Event.ON_DRAG = 'drag';
+  // I.Event.ON_DRAGSTART = 'dragstart';
+  // I.Event.ON_DRAGEND = 'dragend';
+  // I.Event.ON_DRAGENTER = 'dragenter';
+  // I.Event.ON_DRAGLEAVE = 'dragleave';
+  // I.Event.ON_DRAGOVER = 'dragover';
+  // I.Event.ON_DROP = 'drop';
 
-  /**
-   * Dom drag and drop events
-   */
-  Dom.Event.ON_DOM_DRAGSTART = 'onDomDragStart';
-  Dom.Event.ON_DOM_DRAGEND = 'onDomDragEnd';
-  Dom.Event.ON_DOM_DRAGMOVE = 'onDomDragMove';
-  Dom.Event.ON_DOM_DROP = 'onDomDrop';
-  Dom.Event.ON_DOM_DRAGENTER = 'onDomDragEnter';
-  Dom.Event.ON_DOM_DRAGLEAVE = 'onDomDragLeave';
+  // //Dom drag and drop events
+  // I.Event.ON_DOM_DRAGSTART = 'onDomDragStart';
+  // I.Event.ON_DOM_DRAGEND = 'onDomDragEnd';
+  // I.Event.ON_DOM_DRAGMOVE = 'onDomDragMove';
+  // I.Event.ON_DOM_DROP = 'onDomDrop';
+  // I.Event.ON_DOM_DRAGENTER = 'onDomDragEnter';
+  // I.Event.ON_DOM_DRAGLEAVE = 'onDomDragLeave';
 
-  /**
-   * Attaches javascript listener to the element(s) for the given event type
-   *
-   * @param {HTMLElement|NodeList} element
-   * @param {String} event
-   * @param {Function} listener
-   *
-   * @returns {Dom|false} returns Dom if listener has been attached otherwise false
-   */
-  Dom.addListener = function(element, event, listener) {
-    if (element === undefined) {
-      error("Parameter cannot be undefined");
-    }
+  //Attaches javascript listener to DOM Object
+  I.addListener = function(event, element, listener) {
+    if (element === undefined) _error("Parameter cannot be undefined");
 
     if (_isIterable(element)) {
       _each(element, function(e, index) {
-        Dom.addListener(e, event, listener);
+        I.addListener(e, event, listener);
       });
       return Dom;
     }
 
-    if (!Dom.isDom(element) && element !== window) {
-      error(element + " is not a DOMNode object");
-    }
+    _checkDomRequired(element);
 
     element._event = element._event || {};
     element._event[event] = element._event[event] || {
@@ -287,55 +393,37 @@
     };
 
     //checks if listener already exists
-    if (_indexOf(element._event[event].keys, listener) != -1) {
-      return Dom;
-    }
+    if (_indexOf(element._event[event].keys, listener) != -1) return Dom;
 
     element._event[event].keys.push(listener);
     var _listener = function(e) {
-      var evt = new Dom.Event(e);
-      if (listener.call(element, evt) === false) {
-        e.stop();
-      }
+      var evt = new I.Event(e);
+      if (listener.call(element, evt) === false) e.stop();
     };
-    element._event[event].values.push(_listener);
 
+    element._event[event].values.push(_listener);
     element[addListener](eventPrefix + event, _listener);
 
     return Dom;
   };
 
-  /**
-   * Removes javascript listener from the element(s) for the given event type.
-   * @param {HTMLElement|NodeList} element
-   * @param {String} event
-   * @param {Function} listener
-   * @returns {object|false} returns Dom object if success otherwise false
-   */
-  Dom.removeListener = function(element, event, listener) {
-    if (element === undefined) {
-      error("Parameter cannot be undefined");
-    }
+  // remove Listener from element
+  I.removeListener = function(element, event, listener) {
+    if (element === undefined) _error("Parameter cannot be undefined");
 
     if (_isIterable(element)) {
       _each(element, function(e, index) {
-        Dom.removeListener(e, event, listener);
+        I.removeListener(e, event, listener);
       });
       return Dom;
     }
 
-    if (!Dom.isDom(element) && element !== window) {
-      error(element + " is not a DOMNode object");
-    }
+    if (!I.isDom(element) && element !== window) _error(element + " is not a DOMNode object");
 
-    if (!element._event || !element._event[event]) {
-      return false;
-    }
+    if (!element._event || !element._event[event]) return false;
 
     var key = _indexOf(element._event[event].keys, listener);
-    if (key === -1) {
-      return false;
-    }
+    if (key === -1) return false;
     var _listener = element._event[event].values[key];
 
     element[removeListener](eventPrefix + event, _listener);
@@ -345,262 +433,154 @@
     return Dom;
   };
 
-  /**
-   * Determine whether a supplied listener is attached to the element
-   *
-   * @param {HTMLElement} element
-   * @param {String} event
-   * @param {Function} listener
-   * @returns {boolean}
-   */
-  Dom.hasListener = function(element, event, listener) {
-    if (!Dom.isDom(element) && element !== window) {
-      error(element + " is not a DOMNode object");
-    }
-
-    if (!element._event || !element._event[event]) {
-      return false;
-    }
+  // Determine if element has listener
+  I.hasListener = function(element, event, listener) {
+    if (!I.isDom(element) && element !== window) _error(element + " is not a DOMNode object");
+    if (!element._event || !element._event[event]) return false;
     return _indexOf(element._event[event].keys, listener) !== -1;
   };
 
-
-  /* Dom Traversal */
-
-  /**
-   * Finds HTMLElements that match css pattern
-   *
-   * Supported from IE 8.0, FF 3.5, Chrome 4.0, Safari 3.1
-   * @param {String} selector
-   * @oaram {HTMLElement} element not required
-   * @returns {NodeList}
-   */
-  Dom.find = function(selector, element) {
-    var result = [];
-    if (Dom.isDom(element)) {
-      result = element.querySelectorAll(selector);
-    } else {
-      result = document.querySelectorAll(selector);
-    }
-    return result;
+  // Find DOM element by CSS Selector
+  I.find = function(selector, element) {
+    var res = (I.isDom(element)) ? element.querySelectorAll(selector) : document.querySelectorAll(selector);
+    return res;
   };
 
-  /**
-   * Returns HTMLElement with given id
-   *
-   * @param {String} id
-   * @returns {HTMLElement}
-   */
-  Dom.id = function(id) {
+  //Return DOM element by ID
+  I.id = function(id) {
     return document.getElementById(id);
   };
 
-  //Finds domElement by tag
-  Dom.tag = function(name) {
+  //Return DOM element by Tag
+  I.tag = function(name) {
     return document.getElementsByTagName(name);
   };
 
-  /**
-   * Finds HTMLElements with given class name
-   *
-   * Supported from IE 8.0, FF 3.5, Chrome 4.0, Safari 3.1
-   * @param name
-   * @returns {NodeList}
-   */
-  Dom.byClass = function(name) {
+  // Find elements by Class Name
+  I.byClass = function(name) {
     if (name.substring(0, 1) == ".") name = name.substring(1);
     if (document.getElementsByClassName) return document.getElementsByClassName(name);
     if (document.querySelector && document.querySelectorAll) return document.querySelectorAll("." + name);
   };
 
-  /**
-   * Returns current coordinates of the element,
-   * relative to the document
-   *
-   * @param {HTMLElement} element
-   * @returns {*}
-   */
-  Dom.offset = function(element) {
-    if (!Dom.isDom(element)) {
-      return false;
-    }
+  // Get Coordinates from element
+  I.offset = function(element) {
+    _checkDomRequired(element);
+
     var rect = element.getBoundingClientRect();
 
     var offset = {
-      top: Math.round(rect.top),
-      right: Math.round(rect.right),
-      bottom: Math.round(rect.bottom),
-      left: Math.round(rect.left),
-      width: rect.width ? Math.round(rect.width) : Math.round(element.offsetWidth),
-      height: rect.height ? Math.round(rect.height) : Math.round(element.offsetHeight)
+      top: round(rect.top),
+      right: round(rect.right),
+      bottom: round(rect.bottom),
+      left: round(rect.left),
+      width: rect.width ? round(rect.width) : round(element.offsetWidth),
+      height: rect.height ? round(rect.height) : round(element.offsetHeight)
 
     };
 
     //fallback to css width and height
-    if (offset.width <= 0) {
-      offset.width = parseFloat(_getComputedStyle(element, 'width'));
-    }
-    if (offset.height <= 0) {
-      offset.height = parseFloat(_getComputedStyle(element, 'height'));
-    }
+    if (offset.width <= 0) offset.width = parseFloat(_getComputedStyle(element, 'width'));
+    if (offset.height <= 0) offset.height = parseFloat(_getComputedStyle(element, 'height'));
 
     return offset;
   };
 
-  /**
-   * Returns the width of the element
-   *
-   * @param {HTMLElement} element
-   */
-  Dom.width = function(element) {
-    return Dom.offset(element).width;
+  // get Element width
+  I.width = function(element) {
+    return I.offset(element).width;
   };
 
-  /**
-   * Returns the height of the element
-   *
-   * @param {HTMLElement} element
-   */
-  Dom.height = function(element) {
-    return Dom.offset(element).height;
+  // get Height element
+  I.height = function(element) {
+    return I.offset(element).height;
   };
 
-  /**
-   * Gets the parent of the html element
-   *
-   * @param {HTMLElement} element
-   * @returns {HTMLElement}
-   */
-  Dom.parent = function(element) {
-    if (!Dom.isDom(element)) {
-      error(element + " is not a DOMNode object");
-    }
+  // Get parent from HTML Element
+  I.parent = function(element) {
+    if (!I.isDom(element)) _error(element + " is not a DOM element");
     return element.parentNode;
   };
 
-  /**
-   * Gets children elements of html element. Text nodes are ommited by default.
-   * To get textnodes tag must be set to true, eg.
-   *
-   *      Dom.children(element, true)
-   *
-   * @param {HTMLElement} element
-   * @param {String|boolean} tag filters children by tag name or tells to retrieve text nodes as well
-   * @returns {NodeList|Array}
-   */
-  Dom.children = function(element, tag) {
+  // Get Children elements from HTML Element
+  I.children = function(element, tag) {
     var i;
 
-    if (typeof tag === 'boolean' && tag) {
-      return element.childNodes;
-    }
+    if (typeof tag === 'boolean' && tag) return element.childNodes;
 
-    var result = [];
+    var res = [];
 
     if (_isString(tag)) {
-
       for (i = 0, j = element.childNodes.length; i < j; i++) {
-        if (element.childNodes[i].nodeName.toLowerCase() === tag.toLowerCase()) {
-          result.push(element.childNodes[i]);
-        }
+        if (element.childNodes[i].nodeName.toLowerCase() === tag.toLowerCase()) res.push(element.childNodes[i]);
       }
-      return result;
+      return res;
     }
 
     for (i in element.childNodes) {
-      if (element.childNodes[i].nodeType === 1) {
-        result.push(element.childNodes[i]);
-      }
+      if (element.childNodes[i].nodeType === 1) res.push(element.childNodes[i]);
     }
 
-    return result;
-  };
-
-  /**
-   * Gets following sibling element of the HTMLElement
-   *
-   * @param {HTMLElement} element
-   * @returns {HTMLElement}
-   */
-  Dom.next = function(element) {
-    if (!Dom.isDom(element)) error(element + " is not a DOMNode object");
-    var res = element.nextSibling;
-    if (res.nodeType != 1) return Dom.next(res);
     return res;
   };
 
-  /**
-   * Gets previous sibling element of the HTMLElement
-   *
-   * @param {HTMLElement} element
-   * @returns {HTMLElement}
-   */
-  Dom.previous = function(element) {
-    if (!Dom.isDom(element)) {
-      error(element + " is not a DOMNode object");
-    }
+  // get Next sibling from HTML element
+  I.next = function(element) {
+    _checkDomRequired(element);
+    var res = element.nextSibling;
+    if (res.nodeType != 1) return I.next(res);
+    return res;
+  };
+
+  // get Previous sibling from HTML Element
+  I.previous = function(element) {
+    _checkDomRequired(element);
 
     var result = element.previousSibling;
-    if (result.nodeType != 1) {
-      return Dom.previous(result);
-    }
+    if (result.nodeType != 1) return I.previous(result);
     return result;
   };
 
-  /* Dom Manipulation */
-
   /**
    * Gets or sets element attributes
-   * if the attribute is not defined this method
-   * return an empty string
-   *
-   * @param element
-   * @param attribute
-   * @param {*} attribute attribute name or names
-   *
-   * @example
-   * Dom.attribute(el, "href"); // returns href attribute's value of the element
-   * Dom.attribute(el, ["href", "target"]); //returns object of attributed of the element
-   * Dom.attribute(el, {href: "#new"}); //sets href attribute's value
+   * I.attr(element, "href"); // returns href attribute's value of the element
+   * I.attr(element, ["href", "target"]); //returns object of attributed of the element
+   * I.attr(element, {href: "#new"}); //sets href attribute's value
    */
-  Dom.attribute = function(element, attribute) {
-    if (!Dom.isDom(element)) {
-      error(element + " is not a DOMNode object");
-    }
+  I.attr = function(element, attribute) {
+    _checkDomRequired(element);
+
+    var result, i;
 
     //get one attribute
     if (typeof attribute === "string") {
 
-      var result;
-
-      if (attribute === 'class' && element['className'] !== undefined) { //class?
+      if (attribute === 'class' && element.className !== undefined) { //class?
         result = element.className;
-      } else if (attribute === 'for' && element['htmlFor'] !== undefined) { //for?
+      } else if (attribute === 'for' && element.htmlFor !== undefined) { //for?
         result = element.htmlFor;
-      } else if (attribute === 'value' && element['value'] !== undefined) { //value?
+      } else if (attribute === 'value' && element.value !== undefined) { //value?
         result = element.value;
       } else {
         result = element.getAttribute(attribute);
       }
 
-      if (result === '') {
-        result = null;
-      }
+      if (result === '') result = null;
       return result;
     }
 
     //get many
     if (_isArray(attribute)) {
-      var result = {};
-      for (var i in attribute) {
-        result[attribute[i]] = Dom.attribute(element, attribute[i]);
+      result = {};
+      for (i in attribute) {
+        result[attribute[i]] = I.attribute(element, attribute[i]);
       }
       return result;
     }
 
     //set attribute(s)
     if (_isLiteralObject(attribute)) {
-      for (var i in attribute) {
+      for (i in attribute) {
         if (attribute[i] === null) {
           element.removeAttribute(i);
         } else {
@@ -613,31 +593,20 @@
     return false;
   };
 
-  /**
-   * Sets or gets HTMLElement's style
-   *
-   * @param {HTMLElement} element
-   * @param {Object} style key value pair object
-   * @returns {Object|false}
-   */
-  Dom.css = function(element, style) {
+  // Set CSS Properties
+  I.css = function(element, style) {
     var i;
 
     if (_isIterable(element) && _isLiteralObject(style)) {
       _each(element, function(e) {
-        Dom.css(e, style);
+        I.css(e, style);
       });
       return Dom;
     }
-
-    if (!Dom.isDom(element)) {
-      error(element + " is not a DOMNode object");
-    }
+    _checkDomRequired(element);
 
     //get one element
-    if (typeof style === "string") {
-      return _getComputedStyle(element, cssNameProperty(style));
-    }
+    if (typeof style === "string") return _getComputedStyle(element, cssNameProperty(style));
 
     //get array of elements
     if (_isArray(style)) {
@@ -655,52 +624,32 @@
       }
       return style;
     }
-
     return false;
   };
 
-  /**
-   * Gets css classes of the given element
-   *
-   * @param {HTMLElement} element
-   * @returns {Array}
-   */
-  Dom.classess = function(element) {
-    if (!Dom.isDom(element)) {
-      error(element + " is not a DOMNode object");
-    }
+  // Gets css classes
+  I.classess = function(element) {
+    _checkDomRequired(element);
 
-    var attribute = Dom.attribute(element, 'class');
-    if (!attribute) {
-      return [];
-    }
+    var attribute = I.attribute(element, 'class');
+    if (!attribute) return [];
     attribute = attribute.split(' ');
     var classNames = [];
     for (var i in attribute) {
-      if (attribute[i] === '') {
-        continue;
-      }
+      if (attribute[i] === '') continue;
       classNames.push(attribute[i]);
     }
     return classNames;
   };
 
-  /**
-   * Checks whether html element is assigned to the given class(es)
-   *
-   * @param element
-   * @param {String|Array} className
-   * @returns {boolean}
-   */
-  Dom.hasClass = function(element, className) {
-    if (!Dom.isDom(element)) {
-      error(element + " is not a DOMNode object");
-    }
+  // Check if HTML Element hasClass
+  I.hasClass = function(element, className) {
+    _checkDomRequired(element);
 
     if (_isString(className)) {
-      return _indexOf(Dom.classess(element), className) > -1 ? true : false;
+      return _indexOf(I.classess(element), className) > -1 ? true : false;
     } else if (_isArray(className)) {
-      var elementClasses = Dom.classess(element);
+      var elementClasses = I.classess(element);
       for (var i in className) {
         if (_indexOf(className[i], elementClasses) === -1) {
           return false;
@@ -714,130 +663,88 @@
     return false;
   };
 
-  /**
-   * Assign new css class(es) to the html element(s)
-   *
-   * @param {HTMLElement} element
-   * @param {String} className
-   * @returns {boolean}
-   */
-  Dom.addClass = function(element, className) {
-    if (element === undefined) {
-      error("Dom.addClass first parameter cannot be undefined");
-    }
+  // Add Class to HTML object
+  I.addClass = function(element, className) {
+    if (element === undefined) _error("first parameter cannot be undefined");
 
     if (_isIterable(element)) {
       _each(element, function(e) {
-        Dom.addClass(e, className);
+        I.addClass(e, className);
       });
       return Dom;
     }
 
-    if (!Dom.isDom(element)) {
-      error(element + " is not a DOMNode object");
-    }
+    _checkDomRequired(element);
 
     if (_isArray(className)) {
       for (var i in className) {
-        Dom.addClass(element, className[i]);
+        I.addClass(element, className[i]);
       }
       return Dom;
     }
 
-    var classes = Dom.classess(element);
+    var classes = I.classess(element);
 
     if (_indexOf(classes, className) === -1) {
       classes.push(className);
     }
     classes = classes.join(' ');
-    return Dom.attribute(element, {
+    return I.attribute(element, {
       class: classes
     });
   };
 
-  /**
-   * Removes html element's assignment to the css class(es)
-   *
-   * @param {HTMLElement} element
-   * @param {String} className
-   */
-  Dom.removeClass = function(element, className) {
-    if (element === undefined) {
-      error("Dom.removeClass first parameter cannot be undefined");
-    }
+  // Remove Class
+  I.removeClass = function(element, className) {
+    if (element === undefined) _error("first parameter cannot be undefined");
 
     if (_isIterable(element)) {
       _each(element, function(e) {
-        Dom.removeClass(e, className);
+        I.removeClass(e, className);
       });
       return Dom;
     }
-
-    if (!Dom.isDom(element)) {
-      error("Dom.removeClass" + element + " is not a DOMNode object");
-    }
+    if (!I.isDom(element)) _error("I.removeClass" + element + " is not a DOMNode object");
 
     if (!className) {
-      return Dom.attribute(element, {
+      return I.attribute(element, {
         class: null
       });
     }
 
-    var classes = Dom.classess(element);
+    var classes = I.classess(element);
     var i = _indexOf(classes, className);
 
-    if (i === -1) {
-      return;
-    }
+    if (i === -1) return;
+
     classes.splice(i, 1);
-    return Dom.attribute(element, {
+    return I.attribute(element, {
       class: classes.join(' ')
     });
-
   };
 
-  /**
-   * Creates html element(s)
-   *
-   * @param {String} html
-   * @return {HTMLElement}
-   */
-  Dom.create = function(html) {
+  I.create = function(html) {
     var div = document.createElement('tbody');
     var doc = document.createDocumentFragment();
-    Dom.html(div, html);
-    var children = Dom.children(div);
-
+    I.html(div, html);
+    var children = I.children(div);
 
     for (var i = 0, j = children.length; i < j; i++) {
-      Dom.append(doc, children[i]);
+      I.append(doc, children[i]);
     }
 
     return doc;
   };
 
-  /**
-   * Creates a copy of a node, and returns the clone.
-   *
-   * @param {HTMLElement} element
-   * @return {HTMLElement}
-   */
-  Dom.copy = function(element) {
-    if (!Dom.isDom(element)) error("Dom.copy" + element + " is not a DOMNode object");
+  //Create a DOMNode copy
+  I.copy = function(element) {
+    _checkDomRequired(element);
     return element.cloneNode(true);
   };
 
-  /**
-   * Gets or sets inner html of HTMLElement
-   *
-   * @param {HTMLElement} element
-   * @param {String} string
-   * @returns {String}
-   */
-  Dom.html = function(element, string) {
-    if (!Dom.isDom(element)) {
-      error("Dom.html" + element + " is not a DOMNode object");
-    }
+  // Set or Get HTML text from  HTML element
+  I.html = function(element, string) {
+    _checkDomRequired(element);
 
     if (_isString(string)) {
       element.innerHTML = string;
@@ -847,18 +754,9 @@
     return element.innerHTML;
   };
 
-  /**
-   * Gets or sets text value of the HTML element
-   *
-   * @param {HTMLElement} element
-   * @param {String} string
-   * @returns {*}
-   */
-  Dom.text = function(element, string) {
-
-    if (!Dom.isDom(element)) {
-      error("Dom.text " + element + " is not a DOMNode object");
-    }
+  //Set or get Text from HTML element
+  I.text = function(element, string) {
+    _checkDomRequired(element);
 
     if (_isString(string)) {
 
@@ -873,183 +771,83 @@
     if (element.innerText) {
       return element.innerText;
     }
-
     return element.textContent;
+
   };
 
-  /**
-   * Micro template support, replaces the {{tag}} with variable
-   * in hash array passed to function
-   *
-   * @param {String} tpl template string
-   * @param {Object} hash
-   * @returns {String}
-   *
-   * @example
-   * ```
-   * var str = '<h1 class="{{class}}">{{text}}</h1>';
-   * var hash = {class: 'example', text: function () {return 'header';}};
-   *
-   * var result = Dom.template(str, hash);//<h1 class="example">header</h1>
-   * ```
-   */
-  Dom.template = function(tpl, hash) {
+  // Insert html content to the End from HTML Element
+  I.append = function(element, html) {
+    _checkDomRequired(element);
 
-    var regex = /\{\{.*?\}\}/gi;
+    if (_isString(html)) html = I.create(html);
 
-    return tpl.replace(regex, function replacer(str, pos, tpl) {
-      var properties = str.replace('{{', '').replace('}}', '').trim().split(' ');
-      var tag = properties[0];
-      if (!tag || !hash.hasOwnProperty(tag)) {
-        return '';
-      }
-      if (_isFunction(hash[tag])) {
-        return hash[tag].apply(tpl, properties);
-      }
-      if (_isString(hash[tag]) || _isNumeric(hash[tag])) {
-        return hash[tag];
-      }
-      return '';
-    });
-  };
-
-  /**
-   * Inserts content specified by the html argument at the end of HTMLElement
-   *
-   * @param {HTMLElement} element
-   * @param {String|HTMLElement} html
-   * @return {HTMLElement} inserted element
-   */
-  Dom.append = function(element, html) {
-
-    if (!Dom.isDom(element)) {
-      error("Dom.append " + element + " is not a DOMNode object");
-    }
-
-    if (_isString(html)) {
-      html = Dom.create(html);
-    }
     element.appendChild(html);
     return html;
   };
 
-  /**
-   * Inserts content specified by the html argument at the beginning of HTMLElement
-   *
-   * @param {HTMLElement} element
-   * @param {String|HTMLElement} html
-   * @returns {HTMLElement} inserted element
-   */
-  Dom.prepend = function(element, html) {
+  // Insert html content to the BEGINNING from HTML Element
+  I.prepend = function(element, html) {
+    _checkDomRequired(element);
 
-    if (!Dom.isDom(element)) {
-      error("Dom.prepend " + element + " is not a DOMNode object");
-    }
+    if (_isString(html)) html = I.create(html);
 
-    if (_isString(html)) {
-      html = Dom.create(html);
-    }
     element.insertBefore(html, element.firstChild);
     return html;
   };
 
-  /**
-   * Inserts content specified by the html argument after the HTMLElement
-   *
-   * @param {HTMLElement} element
-   * @param {String|HTMLElement} html
-   * @returns {HTMLElement} inserted element
-   */
-  Dom.after = function(element, html) {
-
-    if (!Dom.isDom(element)) {
-      error("Dom.after " + element + " is not a DOMNode object");
-    }
+  // Insert html content AFTER from HTML Element
+  I.after = function(element, html) {
+    _checkDomRequired(element);
 
     if (_isString(html)) {
-      html = Dom.create(html);
+      html = I.create(html);
     }
 
     element.parentNode.insertBefore(html, element.nextSibling);
     return html;
   };
 
-  /**
-   * Inserts content specified by the html argument before the HTMLElement
-   *
-   * @param {HTMLElement} element
-   * @param {String|HTMLElement} html
-   * @returns {HTMLElement} inserted element
-   */
-  Dom.before = function(element, html) {
-
-    if (!Dom.isDom(element)) {
-      error("Dom.before " + element + " is not a DOMNode object");
-    }
+  // Insert html content BEFORE from HTML Element
+  I.before = function(element, html) {
+    _checkDomRequired(element);
 
     if (_isString(html)) {
-      html = Dom.create(html);
+      html = I.create(html);
     }
 
     element.insertBefore(html, element);
     return html;
   };
 
-  /**
-   * Replaces given html element with content specified in html parameter
-   *
-   * @param {HTMLElement} element
-   * @param {String|HTMLElement} html
-   * @returns {HTMLElement} inserted element
-   */
-  Dom.replace = function(element, html) {
+  //Replace Given HTML to element
+  I.replace = function(element, html) {
+    _checkDomRequired(element);
 
-    if (!Dom.isDom(element)) {
-      error("Dom.replace " + element + " is not a DOMNode object");
-    }
+    if (_isString(html)) html = I.create(html);
 
-    if (_isString(html)) {
-      html = Dom.create(html);
-    }
     element.parentNode.replaceChild(html, element);
     return html;
   };
 
-  /**
-   * Removes HTMLElement from dom tree
-   *
-   * @param {HTMLElement} element
-   * @returns {HTMLElement} removed element
-   */
-  Dom.remove = function(element) {
+  // remove DOM element
+  I.remove = function(element) {
+    _checkDomRequired(element);
 
-    if (!Dom.isDom(element)) {
-      error("Dom.remove " + element + " is not a DOMNode object");
-    }
-
-    var parent = element.parentNode;
-    return parent.removeChild(element);
+    return element.parentNode.removeChild(element);
   };
 
-  /**
-   * Sets handler which will be executed as soon as
-   * document will load
-   *
-   * @param {Function} handler
-   * @returns {Dom}
-   */
-  Dom.loaded = function(handler) {
+  // Executed when PAGE is loaded
+  I.loaded = function(handler) {
     if (_isDomLoaded !== false) {
       handler.call(null, _isDomLoaded);
       return Dom;
     }
-
     _domLoadedHandlers.push(handler);
     return Dom;
   };
 
   // executed when document will be ready
-  Dom.ready = function(handler) {
+  I.ready = function(handler) {
     if (_isDomReady !== false) {
       handler.call(null, _isDomReady);
       return Dom;
@@ -1058,22 +856,9 @@
     return Dom;
   };
 
-  function _onDOMReady(e) {
-    //add most used selectors
-    Dom.body = Dom.tag('body')[0];
-    Dom.head = Dom.tag('head')[0];
-
-    var event = new Dom.Event(e);
-    _isDomReady = event;
-
-    _each(_domReadyHandlers, function(fn) {
-      fn.call(null, event);
-    });
-  }
-
   function _onDOMLoaded(e) {
 
-    var event = new Dom.Event(e);
+    var event = new I.Event(e);
     _isDomLoaded = event;
 
     _each(_domLoadedHandlers, function(fn) {
@@ -1082,12 +867,23 @@
   }
 
   //on load
-  if (window.onload !== null) {
-    _domLoadedHandlers.push(window.onload);
-  }
+  if (window.onload !== null) _domLoadedHandlers.push(window.onload);
+
   window.onload = _onDOMLoaded;
 
   //on ready
+  function _onDOMReady(e) {
+    //add most used selectors
+    I.body = I.tag('body')[0];
+    I.head = I.tag('head')[0];
+
+    var event = new I.Event(e);
+    _isDomReady = event;
+
+    _each(_domReadyHandlers, function(fn) {
+      fn.call(null, event);
+    });
+  }
   if (addListener === 'attachEvent') { //shitty browsers
     document[addListener]('onreadystatechange', function(e) {
       if (document.readyState === 'complete') {
