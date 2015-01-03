@@ -44,8 +44,23 @@
 
   //DOM
   var doc = window.document;
-  var createElem = doc.createElement;
-  var div = createElem('div');
+  var _createElem = doc.createElement;
+  var div = _createElem('div');
+
+
+
+  // Save bytes in the minified (but not gzipped) version:
+  var ArrayProto = Array.prototype,
+    ObjProto = Object.prototype,
+    FuncProto = Function.prototype;
+
+  // Create quick reference variables for speed access to core prototypes.
+  var
+    push = ArrayProto.push,
+    slice = ArrayProto.slice,
+    concat = ArrayProto.concat,
+    toString = ObjProto.toString,
+    hasOwnProperty = ObjProto.hasOwnProperty;
 
   // All **ECMAScript 5** native function implementations to shortcut use
   var
@@ -117,6 +132,11 @@
   }
 
 
+
+
+
+  // Util functions
+  //
   var _curry2 = function _curry2(fn) {
     return function(a, b) {
       switch (arguments.length) {
@@ -131,10 +151,6 @@
       }
     };
   };
-
-
-  // Util functions
-  //
 
   var _indexOf = function _indexOf(array, obj) {
     if (Array.prototype.indexOf) return Array.prototype.indexOf.call(array, obj);
@@ -215,13 +231,23 @@
     // i can't bear not to return *something*
     return list;
   };
-
   var _has = _curry2(function(prop, obj) {
     return Object.prototype.hasOwnProperty.call(obj, prop);
   });
 
+
+  /**
+   *
+   * FUNCTIONS
+   *
+   */
+
   // Implement forEach iteration
   I.forEach = _curry2(_forEach);
+
+  // Implement has check
+  I._has = _curry2(__has);
+
 
   // See type element
   // Object | Number | String
@@ -251,7 +277,7 @@
   // IE 5.5+
   I.domNode = function(tag) {
     if (I.isEmpty(tag) || !I.is('String', tag)) error('Need a DOM Object');
-    return createElem(tag);
+    return _createElem(tag);
   };
 
   // Polyfill window.requestAnimationFrame
@@ -422,7 +448,8 @@
 
     if (!element._event || !element._event[event]) return false;
 
-    var key = _indexOf(element._event[event].keys, listener);
+
+    var key = _indexOf(element._event[evenµt].keys, listener);
     if (key === -1) return false;
     var _listener = element._event[event].values[key];
 
@@ -442,8 +469,8 @@
 
   // Find DOM element by CSS Selector
   I.find = function(selector, element) {
-    var res = (I.isDom(element)) ? element.querySelectorAll(selector) : document.querySelectorAll(selector);
-    return res;
+    var result = (I.isDom(element)) ? element.querySelectorAll(selector) : document.querySelectorAll(selector);
+    return result;
   };
 
   //Return DOM element by ID
